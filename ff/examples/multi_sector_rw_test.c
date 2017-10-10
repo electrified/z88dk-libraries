@@ -4,12 +4,12 @@
 / WARNING: The data on the target drive will be lost!
 */
 
-// zcc +yaz180 -subtype=basic_dcio -v --list -m -SO3 -clib=sdcc_iy --max-allocs-per-node100000 diskio_check.c -o diskio_check -create-app
+// zcc +yaz180 -subtype=basic_dcio -v --list -m -SO3 -clib=sdcc_iy --max-allocs-per-node100000 multi_sector_rw_test.c -o multi_sector_rw_test -create-app
 
-// zcc +rc2014 -subtype=basic_dcio -v --list -m -SO3 -clib=sdcc_iy --max-allocs-per-node100000 diskio_check.c -o diskio_check -create-app
+// zcc +rc2014 -subtype=basic_dcio -v --list -m -SO3 -clib=sdcc_iy --max-allocs-per-node100000 multi_sector_rw_test.c -o multi_sector_rw_test -create-app
 
 /*
-doke &h8124,&h9000
+doke &h8224,&h9000
 
 
 
@@ -79,9 +79,12 @@ int test_diskio (
     DRESULT dr;
 
     BYTE current_byte = 0;
-    BYTE retries = 0;
-    BYTE success = 0;
-    UINT bytes_in_error = 0;
+    UINT retries = 0;
+    UINT success = 0;
+    uint16_t bytes_in_error = 0;
+    uint16_t test_iterations = 0;
+    uint16_t test_failures = 0;
+
 
     printf("test_diskio(%u, %u, 0x%04X)\n", pdrv, (UINT)buff, sz_buff);
 
@@ -162,10 +165,12 @@ int test_diskio (
         printf(" Size of the erase block is unknown.\n");
     }
 
-    while (1) {
+    while (test_iterations < 1000) {
         // printf("**** Test cycle %u of %u start ****\n", cc, ncyc);
 
         /* Multiple sector write test */
+
+        test_iterations++;
         printf("**** Multiple sector write test ****\n");
         lba = 1; ns = sz_buff / sz_sect;
         if (ns > 4) ns = 4;
@@ -214,13 +219,19 @@ int test_diskio (
              success = 1;
          } else {
              printf("Failed: Read data differs from the data written. in error: %u pns: %u\n", bytes_in_error, pns);
+             retries++;
          }
-
-          retries++;
         }
+
+        printf("Retry count: %u \n", retries);
+
+        if (retries > 0) {
+          test_failures++;
+        }
+
         pns++;
 
-        printf("**** Test cycle completed ****\n\n");
+        printf("**** Test cycle completed. Tests run: %u Tests failed: %u ****\n\n", test_iterations, test_failures);
         // getchar();
     }
 
